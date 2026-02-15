@@ -1,4 +1,4 @@
-name: Build and Publish Distroless abricate
+name: Build and Publish abricate
 
 on:
   push:

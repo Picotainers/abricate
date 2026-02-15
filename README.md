@@ -1,5 +1,5 @@
 # abricate
-Small, distroless-when-possible container for `abricate`.
+Small compatibility-focused container for `abricate`.
 
 ## how to use
 ```bash
