@@ -1,34 +1,41 @@
 # syntax=docker/dockerfile:1
-# Compatibility-first template for abricate.
-# Installs package from Bioconda and copies the full conda runtime to avoid missing libs/interpreters.
 
-FROM mambaorg/micromamba:2.0.5-debian12-slim AS builder
+FROM debian:bookworm-slim AS builder
 
-RUN micromamba install -y -n base -c conda-forge -c bioconda \
-    abricate \
-    && micromamba clean --all --yes
+ARG ABRICATE_VERSION=v1.0.1
 
-# Resolve a runnable command for this package.
-# Prefer exact match, then underscore variant, then prefix match.
-RUN set -eux; \
-    BIN=""; \
-    if [ -x "/opt/conda/bin/abricate" ]; then BIN="/opt/conda/bin/abricate"; fi; \
-    if [ -z "$BIN" ]; then CAND="/opt/conda/bin/$(echo abricate | tr '-' '_')"; [ -x "$CAND" ] && BIN="$CAND" || true; fi; \
-    if [ -z "$BIN" ]; then BIN="$(find /opt/conda/bin -maxdepth 1 -type f -perm -111 -name 'abricate*' | head -n1 || true)"; fi; \
-    test -n "$BIN"; \
-    printf '%s\n' "$BIN" > /tmp/tool-entry-path
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates git \
+    && rm -rf /var/lib/apt/lists/*
 
-FROM mambaorg/micromamba:2.0.5-debian12-slim
+RUN git clone --depth 1 --branch "${ABRICATE_VERSION}" https://github.com/tseemann/abricate.git /src
 
-COPY --from=builder /opt/conda /opt/conda
-COPY --from=builder /tmp/tool-entry-path /tmp/tool-entry-path
+FROM debian:bookworm-slim
 
-USER root
-ENV PATH="/opt/conda/bin:${PATH}"
-ENV LD_LIBRARY_PATH="/opt/conda/lib:/opt/conda/lib64"
-RUN set -eux; \
-    BIN="$(cat /tmp/tool-entry-path)"; \
-    printf '#!/usr/bin/env bash\nexec "%s" "$@"\n' "$BIN" > /usr/local/bin/abricate
-RUN chmod +x /usr/local/bin/abricate && rm -f /tmp/tool-entry-path
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        ncbi-blast+ \
+        emboss \
+        perl \
+        bioperl \
+        git \
+        gzip \
+        unzip \
+        libjson-perl \
+        libtext-csv-perl \
+        libpath-tiny-perl \
+        liblwp-protocol-https-perl \
+        libwww-perl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /src /opt/abricate
+
+RUN install -m 0755 /opt/abricate/bin/abricate /usr/local/bin/abricate \
+    && install -m 0755 /opt/abricate/bin/abricate-get_db /usr/local/bin/abricate-get_db \
+    && mkdir -p /usr/local/share/abricate \
+    && cp -r /opt/abricate/db /usr/local/share/abricate/db
+
+ENV ABRICATE_DB=/usr/local/share/abricate/db
 WORKDIR /data
-ENTRYPOINT ["/usr/local/bin/abricate"]
+CMD ["abricate", "--help"]

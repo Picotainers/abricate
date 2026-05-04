@@ -1,7 +1,18 @@
 # abricate
-Small compatibility-focused container for `abricate`.
+Source-installed `abricate` container.
 
-## how to use
+## Quick Usage
+
 ```bash
-docker run --rm -v "$(pwd):/data" picotainers/abricate:latest --help
+# Pull the image
+docker pull docker.io/picotainers/abricate:latest
+
+# Run the tool
+docker run --rm docker.io/picotainers/abricate:latest abricate --help
+```
+
+## Additional Example
+
+```bash
+docker run --rm -v "$(pwd):/data" docker.io/picotainers/abricate:latest abricate --help
 ```
