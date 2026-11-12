@@ -14,6 +14,7 @@ FROM debian:bookworm-slim
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
+        any2fasta \
         ca-certificates \
         ncbi-blast+ \
         emboss \
@@ -23,6 +24,7 @@ RUN apt-get update \
         gzip \
         unzip \
         libjson-perl \
+        liblist-moreutils-perl \
         libtext-csv-perl \
         libpath-tiny-perl \
         liblwp-protocol-https-perl \
@@ -31,11 +33,10 @@ RUN apt-get update \
 
 COPY --from=builder /src /opt/abricate
 
-RUN install -m 0755 /opt/abricate/bin/abricate /usr/local/bin/abricate \
-    && install -m 0755 /opt/abricate/bin/abricate-get_db /usr/local/bin/abricate-get_db \
-    && mkdir -p /usr/local/share/abricate \
-    && cp -r /opt/abricate/db /usr/local/share/abricate/db
+RUN chmod +x /opt/abricate/bin/abricate /opt/abricate/bin/abricate-get_db \
+    && ln -sf /opt/abricate/bin/abricate /usr/local/bin/abricate \
+    && ln -sf /opt/abricate/bin/abricate-get_db /usr/local/bin/abricate-get_db \
+    && abricate --setupdb
 
-ENV ABRICATE_DB=/usr/local/share/abricate/db
 WORKDIR /data
 CMD ["abricate", "--help"]
